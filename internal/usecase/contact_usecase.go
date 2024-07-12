@@ -2,15 +2,15 @@ package usecase
 
 import (
 	"context"
+	"golang-clean-architecture/internal/entity"
+	"golang-clean-architecture/internal/model"
+	"golang-clean-architecture/internal/model/converter"
+	"golang-clean-architecture/internal/repository"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-	"golang-clean-architecture/internal/entity"
-	"golang-clean-architecture/internal/gateway/messaging"
-	"golang-clean-architecture/internal/model"
-	"golang-clean-architecture/internal/model/converter"
-	"golang-clean-architecture/internal/repository"
 	"gorm.io/gorm"
 )
 
@@ -19,17 +19,15 @@ type ContactUseCase struct {
 	Log               *logrus.Logger
 	Validate          *validator.Validate
 	ContactRepository *repository.ContactRepository
-	ContactProducer   *messaging.ContactProducer
 }
 
 func NewContactUseCase(db *gorm.DB, logger *logrus.Logger, validate *validator.Validate,
-	contactRepository *repository.ContactRepository, contactProducer *messaging.ContactProducer) *ContactUseCase {
+	contactRepository *repository.ContactRepository) *ContactUseCase {
 	return &ContactUseCase{
 		DB:                db,
 		Log:               logger,
 		Validate:          validate,
 		ContactRepository: contactRepository,
-		ContactProducer:   contactProducer,
 	}
 }
 
@@ -58,12 +56,6 @@ func (c *ContactUseCase) Create(ctx context.Context, request *model.CreateContac
 
 	if err := tx.Commit().Error; err != nil {
 		c.Log.WithError(err).Error("error creating contact")
-		return nil, fiber.ErrInternalServerError
-	}
-
-	event := converter.ContactToEvent(contact)
-	if err := c.ContactProducer.Send(event); err != nil {
-		c.Log.WithError(err).Error("error publishing contact")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -97,12 +89,6 @@ func (c *ContactUseCase) Update(ctx context.Context, request *model.UpdateContac
 
 	if err := tx.Commit().Error; err != nil {
 		c.Log.WithError(err).Error("error updating contact")
-		return nil, fiber.ErrInternalServerError
-	}
-
-	event := converter.ContactToEvent(contact)
-	if err := c.ContactProducer.Send(event); err != nil {
-		c.Log.WithError(err).Error("error publishing contact")
 		return nil, fiber.ErrInternalServerError
 	}
 

@@ -1,11 +1,12 @@
 package test
 
 import (
+	"golang-clean-architecture/internal/config"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"golang-clean-architecture/internal/config"
 	"gorm.io/gorm"
 )
 
@@ -25,7 +26,6 @@ func init() {
 	validate = config.NewValidator(viperConfig)
 	app = config.NewFiber(viperConfig)
 	db = config.NewDatabase(viperConfig, log)
-	producer := config.NewKafkaProducer(viperConfig, log)
 
 	config.Bootstrap(&config.BootstrapConfig{
 		DB:       db,
@@ -33,6 +33,5 @@ func init() {
 		Log:      log,
 		Validate: validate,
 		Config:   viperConfig,
-		Producer: producer,
 	})
 }

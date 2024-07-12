@@ -2,15 +2,15 @@ package usecase
 
 import (
 	"context"
+	"golang-clean-architecture/internal/entity"
+	"golang-clean-architecture/internal/model"
+	"golang-clean-architecture/internal/model/converter"
+	"golang-clean-architecture/internal/repository"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
-	"golang-clean-architecture/internal/entity"
-	"golang-clean-architecture/internal/gateway/messaging"
-	"golang-clean-architecture/internal/model"
-	"golang-clean-architecture/internal/model/converter"
-	"golang-clean-architecture/internal/repository"
 	"gorm.io/gorm"
 )
 
@@ -20,19 +20,17 @@ type AddressUseCase struct {
 	Validate          *validator.Validate
 	AddressRepository *repository.AddressRepository
 	ContactRepository *repository.ContactRepository
-	AddressProducer   *messaging.AddressProducer
 }
 
 func NewAddressUseCase(db *gorm.DB, logger *logrus.Logger, validate *validator.Validate,
 	contactRepository *repository.ContactRepository, addressRepository *repository.AddressRepository,
-	addressProducer *messaging.AddressProducer) *AddressUseCase {
+) *AddressUseCase {
 	return &AddressUseCase{
 		DB:                db,
 		Log:               logger,
 		Validate:          validate,
 		ContactRepository: contactRepository,
 		AddressRepository: addressRepository,
-		AddressProducer:   addressProducer,
 	}
 }
 
@@ -68,12 +66,6 @@ func (c *AddressUseCase) Create(ctx context.Context, request *model.CreateAddres
 
 	if err := tx.Commit().Error; err != nil {
 		c.Log.WithError(err).Error("failed to commit transaction")
-		return nil, fiber.ErrInternalServerError
-	}
-
-	event := converter.AddressToEvent(address)
-	if err := c.AddressProducer.Send(event); err != nil {
-		c.Log.WithError(err).Error("failed to publish address event")
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -114,12 +106,6 @@ func (c *AddressUseCase) Update(ctx context.Context, request *model.UpdateAddres
 
 	if err := tx.Commit().Error; err != nil {
 		c.Log.WithError(err).Error("failed to commit transaction")
-		return nil, fiber.ErrInternalServerError
-	}
-
-	event := converter.AddressToEvent(address)
-	if err := c.AddressProducer.Send(event); err != nil {
-		c.Log.WithError(err).Error("failed to publish address event")
 		return nil, fiber.ErrInternalServerError
 	}
 
