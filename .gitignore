@@ -1,0 +1,36 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Output of the go coverage tool
+*.out
+
+# Logs
+*.log
+
+# Dependency directories
+vendor/
+
+# Go modules
+go.sum
+go.mod
+
+# IDE specific files
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Configuration files
+config.json
+
+# API specifications
+api/api-spec.json
+
+# Test environment files
+test/http-client.env.json
