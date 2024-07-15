@@ -85,6 +85,7 @@ func (c *UserUseCase) Create(ctx context.Context, request *model.RegisterUserReq
 
 	user := &entity.User{
 		ID:       request.ID,
+		Email:    request.Email,
 		Password: string(password),
 		Name:     request.Name,
 	}
@@ -94,11 +95,44 @@ func (c *UserUseCase) Create(ctx context.Context, request *model.RegisterUserReq
 		return nil, fiber.ErrInternalServerError
 	}
 
+	token := uuid.New().String()
+	if err := c.UserRepository.CreateVerificationToken(tx, user, token); err != nil {
+		c.Log.Warnf("Failed to create verification token: %+v", err)
+		return nil, fiber.ErrNotFound
+	}
+
 	if err := tx.Commit().Error; err != nil {
 		c.Log.Warnf("Failed commit transaction : %+v", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
+	return converter.UserToResponse(user), nil
+}
+
+func (c *UserUseCase) VerifiyEmail(ctx context.Context, request *model.VerifyEmailUserRequest) (*model.UserResponse, error) {
+	tx := c.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	if err := c.Validate.Struct(request); err != nil {
+		c.Log.WithError(err).Error("failed to validate request body")
+		return nil, fiber.ErrBadRequest
+	}
+
+	user := new(entity.User)
+	if err := c.UserRepository.FindByEmail(tx, user, request.Email); err != nil {
+		c.Log.Warnf("Failed find user by id : %+v", err)
+		return nil, fiber.ErrNotFound
+	}
+
+	if err := c.UserRepository.VerifyEmailByToken(tx, user, request.Token); err != nil {
+		c.Log.Warnf("Failed to verify email: %+v", err)
+		return nil, fiber.ErrNotFound
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.Log.Warnf("Failed commit transaction : %+v", err)
+		return nil, fiber.ErrInternalServerError
+	}
 	return converter.UserToResponse(user), nil
 }
 
